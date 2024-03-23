@@ -7,7 +7,7 @@ const canvasWidth = 800;
 const canvasHeight = 600;
 const FPS = 60;
 const collisionSpeedRate = 0.9;
-const perFrameSpeedRate = 0.999;
+const perFrameSpeedRate = 0.99;
 
 function BouncingArea() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -18,22 +18,35 @@ function BouncingArea() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let ball: BallType = {
-      x: 200,
-      y: 100,
-      xSpeed: 10,
-      ySpeed: 10,
-      radius: 20,
-      color: "yellow",
-    };
-
+    let balls: BallType[] = [
+      {
+        x: 100,
+        y: 120,
+        xSpeed: -10,
+        ySpeed: 10,
+        radius: 20,
+        color: "yellow",
+      },
+      {
+        x: 50,
+        y: 100,
+        xSpeed: 20,
+        ySpeed: 30,
+        radius: 30,
+        color: "green",
+      },
+    ];
+    const stopCB =  () => clearInterval(interval)
     const interval = setInterval(() => {
       clear(ctx);
-      drawBall(ctx, ball);
-      console.log(ball)
-      ball = prepareNextFrame(ctx, ball, collisionSpeedRate, perFrameSpeedRate);
+      balls.forEach((ball) => drawBall(ctx, ball));
+      
+      balls = balls.map((ball) =>
+        prepareNextFrame(ctx, ball, collisionSpeedRate, perFrameSpeedRate)
+      );
+      
     }, 1000 / FPS);
-    return () => clearInterval(interval);
+    return stopCB
   }, []);
 
   return (
