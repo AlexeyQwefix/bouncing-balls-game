@@ -1,13 +1,10 @@
 import { useEffect, useRef } from "react";
 import s from "./style.module.scss";
-import { BallType } from "../../types/BallType";
-import { clear, drawBall, prepareNextFrame } from "../../ballLogic/ballLogic";
+import { Ball, clear, drawBall, resolveCollisions } from "../../ballLogic/ballLogic";
+import { Line } from "../../ballLogic/lines";
 
 const canvasWidth = 800;
 const canvasHeight = 600;
-const FPS = 60;
-const collisionSpeedRate = 0.9;
-const perFrameSpeedRate = 0.99;
 
 function BouncingArea() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -17,36 +14,51 @@ function BouncingArea() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    let balls: BallType[] = [
-      {
+    let balls: Ball[] = [
+      new Ball({
         x: 100,
         y: 120,
-        xSpeed: -10,
-        ySpeed: 10,
+        xSpeed: 1,
+        ySpeed: 1,
         radius: 20,
         color: "yellow",
-      },
-      {
+      }),
+      new Ball({
         x: 50,
-        y: 100,
-        xSpeed: 20,
-        ySpeed: 30,
+        y: 50,
+        xSpeed: 1,
+        ySpeed: 1,
         radius: 30,
         color: "green",
-      },
+      }),
     ];
-    const stopCB =  () => clearInterval(interval)
-    const interval = setInterval(() => {
-      clear(ctx);
-      balls.forEach((ball) => drawBall(ctx, ball));
-      
-      balls = balls.map((ball) =>
-        prepareNextFrame(ctx, ball, collisionSpeedRate, perFrameSpeedRate)
-      );
-      
-    }, 1000 / FPS);
-    return stopCB
+    console.log(balls)
+
+    const lines: Line[] = [];
+    lines.push(new Line(-10, 10, ctx.canvas.width + 10, 10));
+    lines.push((new Line(-10, ctx.canvas.height - 10, ctx.canvas.width + 10, ctx.canvas.height - 10)).reverse());
+    lines.push((new Line(10, -10, 10, ctx.canvas.height + 10)).reverse());
+    lines.push(new Line(ctx.canvas.width - 10, -10, ctx.canvas.width - 10, ctx.canvas.height + 10));
+    mainLoop();
+    function mainLoop() {
+      // console.warn('mainLoop')
+      if (!ctx) return;
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      resolveCollisions(balls,lines);
+      for (const b of balls) {
+        b.update();
+      }
+      ctx.strokeStyle = "#000";
+      ctx.beginPath();
+      for (const b of balls) {
+        b.draw(ctx);
+      }
+      for (const l of lines) {
+        l.draw(ctx);
+      }
+      ctx.stroke();
+      requestAnimationFrame(mainLoop);
+    }
   }, []);
 
   return (

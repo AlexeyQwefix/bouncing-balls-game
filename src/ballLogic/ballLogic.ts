@@ -1,57 +1,239 @@
-import { BallType } from "../types/BallType";
-import { calcPosition, calcSpeed } from "./calculates";
+import { circlesInterceptUnitTime, interceptLineBallTime } from "./calculates";
+
+type Line = { x1: number; y1: number; x2: number; y2: number };
+const TAU = Math.PI * 2;
+
+export class Ball {
+  x: number = 300;
+  y: number = 400;
+  xSpeed: number = 0;
+  ySpeed: number = 0;
+  color: string = "red";
+  #radius: number = 10;
+  #mass: number = 100;
+  wallLoss: number = 0.8;
+
+  constructor({
+    x,
+    y,
+    xSpeed,
+    ySpeed,
+    radius,
+    color,
+  }: {
+    x: number;
+    y: number;
+    xSpeed?: number;
+    ySpeed?: number;
+    radius?: number;
+    color?: string;
+  }) {
+    this.x = x;
+    this.y = y;
+    if (color) this.color = color;
+    if (xSpeed) this.xSpeed = xSpeed;
+    if (ySpeed) this.ySpeed = ySpeed;
+    if (radius) this.#radius = radius;
+    if (radius) this.#mass = radius;
+  }
+
+  set radius(radius: number) {
+    this.#radius = radius;
+    this.#mass = radius ** 2;
+  }
+  get radius(): number {
+    return this.#radius;
+  }
+  get mass(): number {
+    return this.#mass;
+  }
+  setSpeed(xSpeed: number, ySpeed: number) {
+    this.xSpeed = xSpeed;
+    this.ySpeed = ySpeed;
+  }
+  update() {
+    this.x += this.xSpeed;
+    this.y += this.ySpeed;
+  }
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.moveTo(this.x + this.radius, this.y);
+    ctx.arc(this.x, this.y, this.radius, 0, TAU);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+  }
+  interceptLineTime(l: Line, time: number) {
+    const u = interceptLineBallTime(
+      this.x,
+      this.y,
+      this.xSpeed,
+      this.ySpeed,
+      l.x1,
+      l.y1,
+      l.x2,
+      l.y2,
+      this.radius
+    );
+    if (u && u >= time && u <= 1) {
+      return u;
+    }
+  }
+  checkBallBallTime(t: number, minTime: number) {
+    return t > minTime && t <= 1;
+  }
+  interceptBallTime(b: Ball, time: number) {
+    const x = this.x - b.x;
+    const y = this.y - b.y;
+    const d = (x * x + y * y) ** 0.5;
+    if (d > this.radius + b.radius) {
+      const times = circlesInterceptUnitTime(
+        this.x,
+        this.y,
+        this.x + this.xSpeed,
+        this.y + this.ySpeed,
+        b.x,
+        b.y,
+        b.x + b.xSpeed,
+        b.y + b.ySpeed,
+        this.radius,
+        b.radius
+      );
+      if (times.length) {
+        if (times.length === 1) {
+          if (this.checkBallBallTime(times[0], time)) {
+            return times[0];
+          }
+          return;
+        }
+        if (times[0] <= times[1]) {
+          if (this.checkBallBallTime(times[0], time)) {
+            return times[0];
+          }
+          if (this.checkBallBallTime(times[1], time)) {
+            return times[1];
+          }
+          return;
+        }
+        if (this.checkBallBallTime(times[1], time)) {
+          return times[1];
+        }
+        if (this.checkBallBallTime(times[0], time)) {
+          return times[0];
+        }
+      }
+    }
+  }
+  collideLine(l: Line, time: number) {
+    const x1 = l.x2 - l.x1;
+    const y1 = l.y2 - l.y1;
+    const d = (x1 * x1 + y1 * y1) ** 0.5;
+    const nx = x1 / d;
+    const ny = y1 / d;
+    const u = (this.xSpeed * nx + this.ySpeed * ny) * 2;
+    this.x += this.xSpeed * time;
+    this.y += this.ySpeed * time;
+    this.xSpeed = (nx * u - this.xSpeed) * this.wallLoss;
+    this.ySpeed = (ny * u - this.ySpeed) * this.wallLoss;
+    this.x -= this.xSpeed * time;
+    this.y -= this.ySpeed * time;
+  }
+  collide(b: Ball, time: number) {
+    const a = this;
+    const m1 = a.mass;
+    const m2 = b.mass;
+    const x = a.x - b.x;
+    const y = a.y - b.y;
+    const d = x * x + y * y;
+    const u1 = (a.xSpeed * x + a.ySpeed * y) / d;
+    const u2 = (x * a.ySpeed - y * a.xSpeed) / d;
+    const u3 = (b.xSpeed * x + b.ySpeed * y) / d;
+    const u4 = (x * b.ySpeed - y * b.xSpeed) / d;
+    const mm = m1 + m2;
+    const vu3 = ((m1 - m2) / mm) * u1 + ((2 * m2) / mm) * u3;
+    const vu1 = ((m2 - m1) / mm) * u3 + ((2 * m1) / mm) * u1;
+    a.x = a.x + a.xSpeed * time;
+    a.y = a.y + a.ySpeed * time;
+    b.x = b.x + b.xSpeed * time;
+    b.y = b.y + b.ySpeed * time;
+    b.xSpeed = x * vu1 - y * u4;
+    b.ySpeed = y * vu1 + x * u4;
+    a.xSpeed = x * vu3 - y * u2;
+    a.ySpeed = y * vu3 + x * u2;
+    a.x = a.x - a.xSpeed * time;
+    a.y = a.y - a.ySpeed * time;
+    b.x = b.x - b.xSpeed * time;
+    b.y = b.y - b.ySpeed * time;
+  }
+  doesOverlap(ball: Ball) {
+    const x = this.x - ball.x;
+    const y = this.y - ball.y;
+    return this.radius + ball.radius > (x * x + y * y) ** 0.5;
+  }
+}
 
 export const clear = (ctx: CanvasRenderingContext2D) => {
   ctx.fillStyle = "#31363f";
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 };
 
-export const drawBall = (ctx: CanvasRenderingContext2D, ball: BallType) => {
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
-  ctx.fillStyle = ball.color;
-  ctx.fill();
+export const drawBall = (context: CanvasRenderingContext2D, ball: Ball) => {
+  context.beginPath();
+  context.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
+  context.fillStyle = ball.color;
+  context.fill();
+  context.lineWidth = 5;
+  context.strokeStyle = "#003300";
+  context.stroke();
 };
 
-export const calcSpeedForNextFrame = (
-  ctx: CanvasRenderingContext2D,
-  ball: BallType,
-  collisionSpeedRate: number,
-  perFrameSpeedRate: number
-): BallType => {
-  return {
-    ...ball,
-  };
-};
-
-export const prepareNextFrame = (
-  ctx: CanvasRenderingContext2D,
-  ball: BallType,
-  collisionSpeedRate: number,
-  perFrameSpeedRate: number
-): BallType => {
-  const newXSpeed = calcSpeed(
-    ball.xSpeed,
-    ball.x,
-    ball.radius,
-    ctx.canvas.width,
-    perFrameSpeedRate,
-    collisionSpeedRate
-  );
-  const newYSpeed = calcSpeed(
-    ball.ySpeed,
-    ball.y,
-    ball.radius,
-    ctx.canvas.height,
-    perFrameSpeedRate,
-    collisionSpeedRate
-  );
-
-  return {
-    ...ball,
-    xSpeed: newXSpeed,
-    ySpeed: newYSpeed,
-    x: calcPosition(newXSpeed, ball.x, ball.radius, ctx.canvas.width),
-    y: calcPosition(newYSpeed, ball.y, ball.radius, ctx.canvas.height),
-  };
-};
+export function resolveCollisions(balls: Ball[], lines: Line[]) {
+  var minTime = 0,
+    minObj,
+    minBall,
+    resolving = true,
+    idx = 0,
+    idx1,
+    after = 0,
+    e = 0;
+  while (resolving && e++ < 100) {
+    resolving = false;
+    minObj = undefined;
+    minBall = undefined;
+    minTime = 1;
+    idx = 0;
+    for (const b of balls) {
+      idx1 = idx + 1;
+      while (idx1 < balls.length) {
+        const b1 = balls[idx1++];
+        const time = b.interceptBallTime(b1, after);
+        if (time !== undefined) {
+          if (time <= minTime) {
+            minTime = time;
+            minObj = b1;
+            minBall = b;
+            resolving = true;
+          }
+        }
+      }
+      for (const l of lines) {
+        const time = b.interceptLineTime(l, after);
+        if (time !== undefined) {
+          if (time <= minTime) {
+            minTime = time;
+            minObj = l;
+            minBall = b;
+            resolving = true;
+          }
+        }
+      }
+      idx++;
+    }
+    if (resolving && minBall && minObj) {
+      if (minObj instanceof Ball) {
+        minBall.collide(minObj, minTime);
+      } else {
+        minBall.collideLine(minObj, minTime);
+      }
+      after = minTime;
+    }
+  }
+}
