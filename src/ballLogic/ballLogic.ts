@@ -17,7 +17,7 @@ export class Ball {
   #mass: number = 100;
   wallLoss: number = 0.8;
   frameLoss: number = 0.005;
-  selected:boolean= false
+  selected: boolean = false;
 
   constructor({
     x,
@@ -57,9 +57,9 @@ export class Ball {
     this.xSpeed = xSpeed;
     this.ySpeed = ySpeed;
   }
-  setSelected = (b:boolean)=>{
-    this.selected = b
-  }
+  setSelected = (b: boolean) => {
+    this.selected = b;
+  };
   update() {
     this.x += this.xSpeed;
     this.y += this.ySpeed;
@@ -71,12 +71,15 @@ export class Ball {
       reduceSpeed(this.ySpeed, this.frameLoss)
     );
   }
+  setColor(color: string) {
+    this.color = color;
+    return this.color
+  }
   draw(ctx: CanvasRenderingContext2D) {
-    
-    if(this.selected){
+    if (this.selected) {
       ctx.beginPath();
       ctx.fillStyle = "white";
-      ctx.arc(this.x, this.y, this.radius+5, 0, TAU);
+      ctx.arc(this.x, this.y, this.radius + 5, 0, TAU);
       ctx.fill();
       ctx.closePath();
     }

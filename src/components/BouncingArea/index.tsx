@@ -1,4 +1,4 @@
-import { MouseEventHandler, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import s from "./style.module.scss";
 import { Ball, resolveCollisions } from "../../ballLogic/ballLogic";
 import { Line } from "../../ballLogic/lines";
@@ -7,7 +7,11 @@ const canvasWidth = 800;
 const canvasHeight = 600;
 const FPS = 60;
 
-function BouncingArea() {
+function BouncingArea({
+  setSelectedBall,
+}: {
+  setSelectedBall: (b: Ball | null) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -59,7 +63,7 @@ function BouncingArea() {
       const ball = balls.find(
         (b) => (b.x - x) ** 2 + (b.y - y) ** 2 < b.radius ** 2
       );
-      console.log(ball?.color);
+      setSelectedBall(ball || null);
       balls.forEach((b) => b.setSelected(false));
       if (ball) ball.setSelected(true);
     };
@@ -80,7 +84,6 @@ function BouncingArea() {
       clearInterval(timer);
       canvas.removeEventListener("click", clickHandler);
       canvas.removeEventListener("mousemove", mouseMoveHandler);
-
     };
   }, []);
 

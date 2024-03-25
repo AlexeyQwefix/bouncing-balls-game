@@ -7,19 +7,22 @@
   --color-bg-variant: #31363f;
 
   display: flex;
+  gap: 30px;
   flex-direction: column;
   align-items: center;
   background-color: red;
   min-height: 100vh;
   background-color: var(--color-bg);
   color: var(--color-text);
+  h1 {
+    margin: 0;
+  }
 }
 a {
   color: var(--color-primary);
   text-decoration: none;
-  transition: .3s;
+  transition: 0.3s;
   &:hover {
     color: var(--color-primary-hovered);
   }
 }
-
