@@ -1,17 +1,23 @@
-import { circlesInterceptUnitTime, interceptLineBallTime } from "./calculates";
+import {
+  circlesInterceptUnitTime,
+  interceptLineBallTime,
+  reduceSpeed,
+} from "./calculates";
+import { Line } from "./lines";
 
-type Line = { x1: number; y1: number; x2: number; y2: number };
 const TAU = Math.PI * 2;
 
 export class Ball {
-  x: number = 300;
-  y: number = 400;
+  x: number;
+  y: number;
   xSpeed: number = 0;
   ySpeed: number = 0;
   color: string = "red";
   #radius: number = 10;
   #mass: number = 100;
   wallLoss: number = 0.8;
+  frameLoss: number = 0.005;
+  selected:boolean= false
 
   constructor({
     x,
@@ -51,28 +57,37 @@ export class Ball {
     this.xSpeed = xSpeed;
     this.ySpeed = ySpeed;
   }
+  setSelected = (b:boolean)=>{
+    this.selected = b
+  }
   update() {
     this.x += this.xSpeed;
     this.y += this.ySpeed;
+    this.applySpeedReduction();
+  }
+  applySpeedReduction() {
+    this.setSpeed(
+      reduceSpeed(this.xSpeed, this.frameLoss),
+      reduceSpeed(this.ySpeed, this.frameLoss)
+    );
   }
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.moveTo(this.x + this.radius, this.y);
-    ctx.arc(this.x, this.y, this.radius, 0, TAU);
+    
+    if(this.selected){
+      ctx.beginPath();
+      ctx.fillStyle = "white";
+      ctx.arc(this.x, this.y, this.radius+5, 0, TAU);
+      ctx.fill();
+      ctx.closePath();
+    }
+    ctx.beginPath();
     ctx.fillStyle = this.color;
+    ctx.arc(this.x, this.y, this.radius, 0, TAU);
     ctx.fill();
+    ctx.closePath();
   }
   interceptLineTime(l: Line, time: number) {
-    const u = interceptLineBallTime(
-      this.x,
-      this.y,
-      this.xSpeed,
-      this.ySpeed,
-      l.x1,
-      l.y1,
-      l.x2,
-      l.y2,
-      this.radius
-    );
+    const u = interceptLineBallTime(this, l);
     if (u && u >= time && u <= 1) {
       return u;
     }
@@ -169,21 +184,6 @@ export class Ball {
     return this.radius + ball.radius > (x * x + y * y) ** 0.5;
   }
 }
-
-export const clear = (ctx: CanvasRenderingContext2D) => {
-  ctx.fillStyle = "#31363f";
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-};
-
-export const drawBall = (context: CanvasRenderingContext2D, ball: Ball) => {
-  context.beginPath();
-  context.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
-  context.fillStyle = ball.color;
-  context.fill();
-  context.lineWidth = 5;
-  context.strokeStyle = "#003300";
-  context.stroke();
-};
 
 export function resolveCollisions(balls: Ball[], lines: Line[]) {
   var minTime = 0,

@@ -1,4 +1,5 @@
 import { Ball } from "./ballLogic";
+import { Line } from "./lines";
 
 export const randomNumber = (min: number, max: number) =>
   Math.random() * (max - min) + min;
@@ -83,25 +84,18 @@ const quadRoots = (a: number, b: number, c: number) => {
 };
 
 export const interceptLineBallTime = (
-  x: number,
-  y: number,
-  vx: number,
-  vy: number,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  radius: number
+  ball:Ball,
+  line:Line,
 ) => {
-  const xx = x2 - x1;
-  const yy = y2 - y1;
-  const d = vx * yy - vy * xx;
+  const xx = line.x2 - line.x1;
+  const yy = line.y2 - line.y1;
+  const d = ball.xSpeed * yy - ball.ySpeed * xx;
   if (d > 0) {
     // only if moving towards the line
-    const dd = radius / (xx * xx + yy * yy) ** 0.5;
+    const dd = ball.radius / (xx * xx + yy * yy) ** 0.5;
     const nx = xx * dd;
     const ny = yy * dd;
-    return (xx * (y - (y1 + nx)) - yy * (x - (x1 - ny))) / d;
+    return (xx * (ball.y - (line.y1 + nx)) - yy * (ball.x - (line.x1 - ny))) / d;
   }
 };
 export const canAdd = (ball: Ball, balls: Ball[]) => {
@@ -111,4 +105,9 @@ export const canAdd = (ball: Ball, balls: Ball[]) => {
     }
   }
   return true;
+};
+export const reduceSpeed = (speed: number, loss: number) => {
+  const absSpeed = Math.abs(speed);
+  if (absSpeed <= loss) return 0;
+  return Math.sign(speed) * (absSpeed - loss);
 };

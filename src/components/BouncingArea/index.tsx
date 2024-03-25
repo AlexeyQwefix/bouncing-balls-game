@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
+import { MouseEventHandler, useEffect, useRef } from "react";
 import s from "./style.module.scss";
-import { Ball, clear, drawBall, resolveCollisions } from "../../ballLogic/ballLogic";
+import { Ball, resolveCollisions } from "../../ballLogic/ballLogic";
 import { Line } from "../../ballLogic/lines";
 
 const canvasWidth = 800;
 const canvasHeight = 600;
+const FPS = 60;
 
 function BouncingArea() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -16,49 +17,71 @@ function BouncingArea() {
     if (!ctx) return;
     let balls: Ball[] = [
       new Ball({
-        x: 100,
-        y: 120,
-        xSpeed: 1,
+        x: 250,
+        y: 300,
+        xSpeed: 3,
         ySpeed: 1,
-        radius: 20,
+        radius: 200,
         color: "yellow",
       }),
       new Ball({
-        x: 50,
-        y: 50,
-        xSpeed: 1,
-        ySpeed: 1,
+        x: 600,
+        y: 400,
+        xSpeed: 0,
+        ySpeed: 0,
         radius: 30,
-        color: "green",
+        color: "red",
       }),
     ];
-    console.log(balls)
+    const lines: Line[] = [
+      new Line(0, 0, canvasWidth, 0), //top
+      new Line(0, canvasHeight, canvasWidth, canvasHeight).reverse(), //bot
+      new Line(0, 0, 0, canvasHeight).reverse(), //left
+      new Line(canvasWidth, 0, canvasWidth, canvasHeight), //right
+    ];
 
-    const lines: Line[] = [];
-    lines.push(new Line(-10, 10, ctx.canvas.width + 10, 10));
-    lines.push((new Line(-10, ctx.canvas.height - 10, ctx.canvas.width + 10, ctx.canvas.height - 10)).reverse());
-    lines.push((new Line(10, -10, 10, ctx.canvas.height + 10)).reverse());
-    lines.push(new Line(ctx.canvas.width - 10, -10, ctx.canvas.width - 10, ctx.canvas.height + 10));
-    mainLoop();
-    function mainLoop() {
-      // console.warn('mainLoop')
+    function drawFrame() {
       if (!ctx) return;
+
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      resolveCollisions(balls,lines);
-      for (const b of balls) {
-        b.update();
-      }
-      ctx.strokeStyle = "#000";
-      ctx.beginPath();
-      for (const b of balls) {
-        b.draw(ctx);
-      }
-      for (const l of lines) {
-        l.draw(ctx);
-      }
-      ctx.stroke();
-      requestAnimationFrame(mainLoop);
+
+      resolveCollisions(balls, lines);
+      balls.forEach((b) => b.update());
+      balls.forEach((b) => b.draw(ctx));
+      lines.forEach((l) => l.draw(ctx));
     }
+    const timer = setInterval(drawFrame, 1000 / FPS);
+
+    const clickHandler = (e: MouseEvent) => {
+      const x = e.offsetX;
+      const y = e.offsetY;
+      // find circle under click
+      const ball = balls.find(
+        (b) => (b.x - x) ** 2 + (b.y - y) ** 2 < b.radius ** 2
+      );
+      console.log(ball?.color);
+      balls.forEach((b) => b.setSelected(false));
+      if (ball) ball.setSelected(true);
+    };
+    const mouseMoveHandler = (e: MouseEvent) => {
+      const x = e.offsetX;
+      const y = e.offsetY;
+      canvas.style.cursor = balls.some(
+        (b) => (b.x - x) ** 2 + (b.y - y) ** 2 < b.radius ** 2
+      )
+        ? "pointer"
+        : "default";
+    };
+
+    canvas.addEventListener("click", clickHandler);
+    canvas.addEventListener("mousemove", mouseMoveHandler);
+
+    return () => {
+      clearInterval(timer);
+      canvas.removeEventListener("click", clickHandler);
+      canvas.removeEventListener("mousemove", mouseMoveHandler);
+
+    };
   }, []);
 
   return (
