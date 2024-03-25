@@ -10,10 +10,10 @@ export class Line {
     this.y2 = y2;
   }
   draw(ctx: CanvasRenderingContext2D) {
+    ctx.beginPath();
     ctx.moveTo(this.x1, this.y1);
     ctx.lineTo(this.x2, this.y2);
-    // ctx.fillStyle = "brown";
-    ctx.fill();
+    ctx.closePath();
   }
   reverse() {
     const x = this.x1;

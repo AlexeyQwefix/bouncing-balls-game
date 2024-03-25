@@ -15,6 +15,7 @@ function App() {
             Github
           </a>
         </h1>
+        <h2>Left click to apply speed, right click to pick ball</h2>
       </header>
       <BouncingArea setSelectedBall={setSelectedBall}></BouncingArea>
       {selectedBall && (

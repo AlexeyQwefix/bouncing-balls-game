@@ -1,6 +1,7 @@
 import {
   circlesInterceptUnitTime,
   interceptLineBallTime,
+  invertColor,
   reduceSpeed,
 } from "./calculates";
 import { Line } from "./lines";
@@ -14,10 +15,11 @@ export class Ball {
   ySpeed: number = 0;
   color: string = "red";
   #radius: number = 10;
-  #mass: number = 100;
+  #mass: number = 1000;
   wallLoss: number = 0.8;
   frameLoss: number = 0.005;
   selected: boolean = false;
+  isDraggingTo: { x: number; y: number } | null = null;
 
   constructor({
     x,
@@ -40,7 +42,7 @@ export class Ball {
     if (xSpeed) this.xSpeed = xSpeed;
     if (ySpeed) this.ySpeed = ySpeed;
     if (radius) this.#radius = radius;
-    if (radius) this.#mass = radius;
+    if (radius) this.#mass = radius**2;
   }
 
   set radius(radius: number) {
@@ -73,7 +75,10 @@ export class Ball {
   }
   setColor(color: string) {
     this.color = color;
-    return this.color
+    return this.color;
+  }
+  setIsDraggingTo(draggingObj: { x: number; y: number } | null) {
+    this.isDraggingTo = draggingObj;
   }
   draw(ctx: CanvasRenderingContext2D) {
     if (this.selected) {
@@ -88,7 +93,81 @@ export class Ball {
     ctx.arc(this.x, this.y, this.radius, 0, TAU);
     ctx.fill();
     ctx.closePath();
+    if (this.isDraggingTo) {
+      const angle = Math.atan2(
+        this.isDraggingTo.y - this.y,
+        this.isDraggingTo.x - this.x
+      );
+      const dragPointInObj = this.calculateDragToPointInBall(
+        this.isDraggingTo,
+        angle
+      );
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = invertColor(this.color);
+      ctx.fillStyle = invertColor(this.color);
+      //line
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(dragPointInObj.x, dragPointInObj.y);
+      ctx.stroke();
+      ctx.closePath();
+
+      //arrow
+
+      ctx.beginPath();
+      ctx.lineWidth = 0;
+      ctx.lineTo(dragPointInObj.x, dragPointInObj.y);
+      ctx.lineTo(
+        dragPointInObj.x - 8 * Math.cos(angle - Math.PI / 6),
+        dragPointInObj.y - 8 * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.moveTo(dragPointInObj.x, dragPointInObj.y);
+      ctx.lineTo(
+        dragPointInObj.x - 8 * Math.cos(angle + Math.PI / 6),
+        dragPointInObj.y - 8 * Math.sin(angle + Math.PI / 6)
+      );
+
+      ctx.fill();
+      ctx.stroke();
+      ctx.closePath();
+    }
   }
+  applySpeed() {
+    if (!this.isDraggingTo) return;
+    const angle = Math.atan2(
+      this.isDraggingTo.y - this.y,
+      this.isDraggingTo.x - this.x
+    );
+    const dragPointInObj = this.calculateDragToPointInBall(
+      this.isDraggingTo,
+      angle
+    );
+    this.setSpeed(
+      ((dragPointInObj.x - this.x) * 20) / this.radius,
+      ((dragPointInObj.y - this.y) * 20) / this.radius
+    );
+    this.setIsDraggingTo(null)
+  }
+  calculateDragToPointInBall = (
+    isDraggingTo: {
+      x: number;
+      y: number;
+    },
+    angle: number
+  ): { x: number; y: number } => {
+    const dx = this.x - isDraggingTo.x;
+    const dy = this.y - isDraggingTo.y;
+    const lengthUnderMouse = Math.sqrt(dx ** 2 + dy ** 2);
+
+    if (lengthUnderMouse <= this.radius) {
+      return isDraggingTo;
+    }
+
+    return {
+      x: this.x + this.radius * Math.cos(angle),
+      y: this.y + this.radius * Math.sin(angle),
+    };
+  };
   interceptLineTime(l: Line, time: number) {
     const u = interceptLineBallTime(this, l);
     if (u && u >= time && u <= 1) {

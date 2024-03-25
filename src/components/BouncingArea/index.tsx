@@ -21,20 +21,36 @@ function BouncingArea({
     if (!ctx) return;
     let balls: Ball[] = [
       new Ball({
-        x: 250,
-        y: 300,
-        xSpeed: 3,
-        ySpeed: 1,
-        radius: 200,
-        color: "yellow",
+        x: 350,
+        y: 200,
+        xSpeed: 10,
+        ySpeed: -10,
+        radius: 25,
+        color: "#ff0000",
+      }),
+      new Ball({
+        x: 700,
+        y: 200,
+        xSpeed: -10,
+        ySpeed: 10,
+        radius: 50,
+        color: "#00ff00",
       }),
       new Ball({
         x: 600,
         y: 400,
-        xSpeed: 0,
-        ySpeed: 0,
-        radius: 30,
-        color: "red",
+        xSpeed: -10,
+        ySpeed: -10,
+        radius: 75,
+        color: "#0000ff",
+      }),
+      new Ball({
+        x: 170,
+        y: 400,
+        xSpeed: 10,
+        ySpeed: 10,
+        radius: 100,
+        color: "#ffff00",
       }),
     ];
     const lines: Line[] = [
@@ -51,15 +67,15 @@ function BouncingArea({
 
       resolveCollisions(balls, lines);
       balls.forEach((b) => b.update());
-      balls.forEach((b) => b.draw(ctx));
       lines.forEach((l) => l.draw(ctx));
+      balls.forEach((b) => b.draw(ctx));
     }
     const timer = setInterval(drawFrame, 1000 / FPS);
 
     const clickHandler = (e: MouseEvent) => {
+      e.preventDefault()
       const x = e.offsetX;
       const y = e.offsetY;
-      // find circle under click
       const ball = balls.find(
         (b) => (b.x - x) ** 2 + (b.y - y) ** 2 < b.radius ** 2
       );
@@ -70,22 +86,57 @@ function BouncingArea({
     const mouseMoveHandler = (e: MouseEvent) => {
       const x = e.offsetX;
       const y = e.offsetY;
+
+      const draggingBall = balls.find((b) => !!b.isDraggingTo);
+      if (draggingBall) {
+        draggingBall.setIsDraggingTo({ x, y });
+        canvas.style.cursor = "none";
+        return;
+      }
+
       canvas.style.cursor = balls.some(
         (b) => (b.x - x) ** 2 + (b.y - y) ** 2 < b.radius ** 2
       )
         ? "pointer"
         : "default";
     };
+    const mouseDown = (e: MouseEvent) => {
+      if(e.button!==0)return
+      e.preventDefault();
+      const x = e.offsetX;
+      const y = e.offsetY;
+      balls.forEach((b) =>
+        b.setIsDraggingTo(
+          (b.x - x) ** 2 + (b.y - y) ** 2 < b.radius ** 2 ? { x, y } : null
+        )
+      );
+    };
+    const mouseUp = (e: MouseEvent) => {
+      e.preventDefault();
+      balls.forEach((b) => b.applySpeed());
+      canvas.style.cursor = "default";
+    };
+    const mouseLeave = (e: MouseEvent) => {
+      e.preventDefault();
+      balls.forEach((b) => b.setIsDraggingTo(null));
+      canvas.style.cursor = "default";
+    };
 
-    canvas.addEventListener("click", clickHandler);
+    canvas.addEventListener("contextmenu", clickHandler);
     canvas.addEventListener("mousemove", mouseMoveHandler);
+    canvas.addEventListener("mousedown", mouseDown);
+    canvas.addEventListener("mouseup", mouseUp);
+    canvas.addEventListener("mouseleave", mouseLeave);
 
     return () => {
       clearInterval(timer);
-      canvas.removeEventListener("click", clickHandler);
+      canvas.removeEventListener("contextmenu", clickHandler);
       canvas.removeEventListener("mousemove", mouseMoveHandler);
+      canvas.removeEventListener("mousedown", mouseDown);
+      canvas.removeEventListener("mouseup", mouseUp);
+      canvas.removeEventListener("mouseleave", mouseLeave);
     };
-  }, []);
+  }, [setSelectedBall]);
 
   return (
     <canvas

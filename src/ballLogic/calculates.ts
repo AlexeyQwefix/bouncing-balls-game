@@ -83,10 +83,7 @@ const quadRoots = (a: number, b: number, c: number) => {
   return d === 0 ? [0.5 * -b] : [];
 };
 
-export const interceptLineBallTime = (
-  ball:Ball,
-  line:Line,
-) => {
+export const interceptLineBallTime = (ball: Ball, line: Line) => {
   const xx = line.x2 - line.x1;
   const yy = line.y2 - line.y1;
   const d = ball.xSpeed * yy - ball.ySpeed * xx;
@@ -95,7 +92,9 @@ export const interceptLineBallTime = (
     const dd = ball.radius / (xx * xx + yy * yy) ** 0.5;
     const nx = xx * dd;
     const ny = yy * dd;
-    return (xx * (ball.y - (line.y1 + nx)) - yy * (ball.x - (line.x1 - ny))) / d;
+    return (
+      (xx * (ball.y - (line.y1 + nx)) - yy * (ball.x - (line.x1 - ny))) / d
+    );
   }
 };
 export const canAdd = (ball: Ball, balls: Ball[]) => {
@@ -111,3 +110,20 @@ export const reduceSpeed = (speed: number, loss: number) => {
   if (absSpeed <= loss) return 0;
   return Math.sign(speed) * (absSpeed - loss);
 };
+
+export const invertColor = (hex: string) => {
+  let rgbNumbers = hex;
+  if (hex.indexOf("#") === 0) {
+    rgbNumbers = hex.slice(1);
+  }
+  if (rgbNumbers.length !== 6) {
+    return hex;
+  }
+  const padZero = (str: string) => ("00" + str).slice(-2);
+
+  const r = (255 - parseInt(rgbNumbers.slice(0, 2), 16)).toString(16);
+  const g = (255 - parseInt(rgbNumbers.slice(2, 4), 16)).toString(16);
+  const b = (255 - parseInt(rgbNumbers.slice(4, 6), 16)).toString(16);
+  return '#' + padZero(r) + padZero(g) + padZero(b);
+};
+
